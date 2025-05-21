@@ -16,7 +16,7 @@
     }
 
     .header {
-      background-color: #1b2a41; /* Updated header color */
+      background-color: #1b2a41;
       color: white;
       width: 100%;
       padding: 15px 30px;
@@ -74,21 +74,50 @@
       align-items: center;
       justify-content: center;
     }
+
+    #fileInput {
+      display: none;
+    }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <img src="static/img/metrolink-logo.png" alt="Metrolink Logo">
+    <img src="img/metrolink-logo.png" alt="Metrolink Logo">
     <div class="header-title">Slot 10</div>
   </div>
 
   <div class="content">
     <h1>Upload your files below:</h1>
-    <button class="upload-button" onclick="alert('Upload functionality coming soon!')">
+    <button class="upload-button" onclick="document.getElementById('fileInput').click()">
       UPLOAD
     </button>
+    <input type="file" id="fileInput" onchange="handleFile(this.files)">
   </div>
+
+  <script>
+    function handleFile(files) {
+      if (files.length > 0) {
+        const file = files[0];
+        alert(`You selected: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+        
+        // You can now send `file` to a backend using fetch, or process it client-side
+        // Example (if you're using FormData):
+        /*
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        fetch("/upload-endpoint", {
+          method: "POST",
+          body: formData,
+        })
+        .then(res => res.text())
+        .then(result => console.log("Upload success:", result))
+        .catch(err => console.error("Upload failed:", err));
+        */
+      }
+    }
+  </script>
 
 </body>
 </html>

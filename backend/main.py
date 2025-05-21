@@ -19,5 +19,10 @@ def get_index_html() -> HTMLResponse:
     with open("frontend/login.html") as html:
         return HTMLResponse(content=html.read())
 
+@app.get("/index", response_class=HTMLResponse)
+def get_index_html() -> HTMLResponse:
+    with open("frontend/index.html") as html:
+        return HTMLResponse(content=html.read())
+
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=6543)
