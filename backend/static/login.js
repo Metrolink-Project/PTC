@@ -7,7 +7,7 @@ document.querySelector('.form').addEventListener('submit', function(event) {
   console.log('Username:', username);
   console.log('Password:', password);
 
-  fetch('http://localhost:8000/login', {
+  fetch('http://127.0.0.1:6543/login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

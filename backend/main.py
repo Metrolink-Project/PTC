@@ -9,6 +9,9 @@ from pydantic import BaseModel
 # Configuration
 app = FastAPI()                   # Specify the "app" that will run the routing
 
+username = ""
+password = ""
+
 # Mount the static directory
 app.mount("/static", StaticFiles(directory="backend/static"), name="static")
 
@@ -30,6 +33,9 @@ class LoginData(BaseModel):
 def login(data: LoginData):
     print("Username:" + data.username)
     print("Password:" + data.password)
+    username = data.username
+    password = data.password
+    return {username, password}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=6543)
