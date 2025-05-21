@@ -16,7 +16,7 @@
     }
 
     .header {
-      background-color: #1b2a41; /* Updated header color */
+      background-color: #1b2a41;
       color: white;
       width: 100%;
       padding: 15px 30px;
@@ -37,15 +37,45 @@
 
     h1 {
       font-size: 32px;
-      margin-bottom: 40px;
+      margin-bottom: 20px;
       margin-top: 60px;
       color: #005f73;
       text-align: center;
     }
 
+    .content {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 300px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      padding: 12px;
+      font-size: 16px;
+      border: 2px solid #0077b6;
+      border-radius: 8px;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: #023e8a;
+    }
+
     .login-button {
-      padding: 20px 40px;
-      font-size: 20px;
+      padding: 15px;
+      font-size: 18px;
       font-weight: bold;
       background-color: #0077b6;
       color: white;
@@ -54,7 +84,6 @@
       cursor: pointer;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       transition: background-color 0.3s ease, transform 0.2s ease;
-      align-self: center;
     }
 
     .login-button:hover {
@@ -66,14 +95,6 @@
       background-color: #001f54;
       transform: scale(1);
     }
-
-    .content {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
   </style>
 </head>
 <body>
@@ -84,10 +105,20 @@
   </div>
 
   <div class="content">
-    <button class="login-button" onclick="alert('Login functionality coming soon!')">
-      LOGIN
-    </button>
+    <h1>Login</h1>
+    <form class="form" onsubmit="handleLogin(event)">
+      <input type="text" placeholder="Username" required>
+      <input type="password" placeholder="Password" required>
+      <button type="submit" class="login-button">LOGIN</button>
+    </form>
   </div>
+
+  <script>
+    function handleLogin(event) {
+      event.preventDefault();
+      alert('Login functionality coming soon!');
+    }
+  </script>
 
 </body>
 </html>
