@@ -1,12 +1,10 @@
 # Necessary Imports
 from fastapi import FastAPI                   # The main FastAPI import
-from fastapi.responses import HTMLResponse    # Used for returning HTML responses
+from fastapi.responses import HTMLResponse   # Used for returning HTML responses
 from fastapi.staticfiles import StaticFiles   # Used for serving static files
 from fastapi.responses import JSONResponse
 import uvicorn                                # Used for running the app
-
-username = ""
-password = ""
+from pydantic import BaseModel
 
 # Configuration
 app = FastAPI()                   # Specify the "app" that will run the routing
@@ -23,6 +21,15 @@ def get_index_html() -> HTMLResponse:
 def get_index_html() -> HTMLResponse:
     with open("frontend/index.html") as html:
         return HTMLResponse(content=html.read())
+    
+class LoginData(BaseModel):
+    username: str
+    password: str
+
+@app.post("/login")
+def login(data: LoginData):
+    print("Username:" + data.username)
+    print("Password:" + data.password)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=6543)
