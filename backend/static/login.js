@@ -25,4 +25,20 @@ document.querySelector('.form').addEventListener('submit', function(event) {
     console.error('Error:', error);
   });
 
+  fetch('http://127.0.0.1:6543/index')
+  .then((response) => {
+      if (!response.ok) {
+          throw new Error(`HTTP Error: ${response.status}`);
+      }
+      return response.text();
+  })
+  .then((html) => {
+    document.body.innerHTML = html;
+  })
+  .catch((error) => {
+      console.error(error);
+  });
+
+  console.log("WHGYYYYYY");
+
 });

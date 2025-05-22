@@ -1,10 +1,11 @@
 # Necessary Imports
-from fastapi import FastAPI                   # The main FastAPI import
+from fastapi import FastAPI, File, UploadFile  # The main FastAPI import
 from fastapi.responses import HTMLResponse   # Used for returning HTML responses
 from fastapi.staticfiles import StaticFiles   # Used for serving static files
 from fastapi.responses import JSONResponse
 import uvicorn                                # Used for running the app
 from pydantic import BaseModel
+import paramiko
 
 # Configuration
 app = FastAPI()                   # Specify the "app" that will run the routing
@@ -36,6 +37,12 @@ def login(data: LoginData):
     username = data.username
     password = data.password
     return {username, password}
+
+'''
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    return 0
+'''
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=6543)
