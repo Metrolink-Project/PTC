@@ -44,7 +44,7 @@ def login(data: LoginData):
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
 
-    message = "Python recieved the file"
+    message = f"Python recieved the file: {file.filename}"
 
     return message
     '''
