@@ -1,11 +1,8 @@
 function handleFile(files) {
   if (files.length > 0) {
       const file = files[0];
-      alert(`You selected: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
       
-      // You can now send `file` to a backend using fetch, or process it client-side
-      // Example (if you're using FormData):
-      
+      // Sending `file` to a backend using fetch
       const formData = new FormData();
       formData.append("file", file);
       
@@ -14,8 +11,8 @@ function handleFile(files) {
       body: formData,
       })
       .then(res => res.text())
-      .then(result => console.log("Upload success:", result))
-      .catch(err => console.error("Upload failed:", err));
+      .then(result => alert("Upload success: " + result))
+      .catch(err => alert("Upload failed: " + err));
   }
 }
 
