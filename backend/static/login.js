@@ -11,7 +11,7 @@ function handleFile(files) {
       body: formData,
       })
       .then(res => res.text())
-      .then(result => alert("Upload success: " + result))
+      .then(result => alert(result))
       .catch(err => alert("Upload failed: " + err));
   }
 }

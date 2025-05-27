@@ -1,6 +1,6 @@
 # Necessary Imports
-from fastapi import FastAPI, File, UploadFile  # The main FastAPI import
-from fastapi.responses import HTMLResponse   # Used for returning HTML responses
+from fastapi import FastAPI, File, UploadFile, HTTPException  # The main FastAPI import
+from fastapi.responses import HTMLResponse  # Used for returning HTML responses
 from fastapi.staticfiles import StaticFiles   # Used for serving static files
 from fastapi.responses import JSONResponse
 import uvicorn                                # Used for running the app
@@ -49,15 +49,18 @@ async def upload_file(file: UploadFile = File(...)):
     message = f"Python recieved the file: {file.filename} {file.content_type}"
 
     # Perfect place to stop non-fsa files from going through
-    # return message
+    if not file.filename.lower().endswith(".fsa"):
+        return JSONResponse(status_code=400, content="ERROR: Only .fsa files are allowed.")
 
     # Temporary folder to put file in order to upload
-    temp_folder = "Z:\\Onboard Team\\Marc Reta\\tmp"
+    temp_folder = "Z:\\Onboard Team\\Marc Reta"
     os.makedirs(temp_folder, exist_ok=True)
     temp_file_path = os.path.join(temp_folder, file.filename)
 
     with open(temp_file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+
+    buffer.close()
 
     # SSH credentials
     ssh_host = "10.255.255.20"
@@ -83,8 +86,6 @@ async def upload_file(file: UploadFile = File(...)):
         output = stdout.read().decode()
         print(output)
 
-        client.close()
-
         # Upload file to slot 10
         transport = paramiko.Transport((ssh_host, ssh_port))
         transport.connect(username=ssh_user, password=ssh_pass)
@@ -94,7 +95,17 @@ async def upload_file(file: UploadFile = File(...)):
         sftp.close()
         transport.close()
         os.remove(temp_file_path)
-        return f"Uploaded to {remote_path}"
+
+        '''
+        # Running install.sh
+        command = "cd 339bc94e1be405554a9107988b5535c0 &&" +
+            " chmod +x install.sh && ./install.sh"
+        '''
+
+
+        client.close()
+
+        return f"Upload Sucess! Uploaded to {remote_path}"
 
     except Exception as e:
         print(f"An error occurred: {e}")
