@@ -48,9 +48,10 @@ async def upload_file(file: UploadFile = File(...)):
 
     message = f"Python recieved the file: {file.filename} {file.content_type}"
 
-    # Perfect place to stop non-fsa files from going through
-    if not file.filename.lower().endswith(".fsa"):
-        return JSONResponse(status_code=400, content="ERROR: Only .fsa files are allowed.")
+    # Perfect place to stop non-fsa files from going through for non-root users
+    if (username != "root"):
+        if not file.filename.lower().endswith(".fsa"):
+            return JSONResponse(status_code=400, content="ERROR: Only .fsa files are allowed.")
 
     # Temporary folder to put file in order to upload
     temp_folder = "Z:\\Onboard Team\\Marc Reta"
@@ -87,14 +88,24 @@ async def upload_file(file: UploadFile = File(...)):
         print(output)
 
         # Upload file to slot 10
-        transport = paramiko.Transport((ssh_host, ssh_port))
-        transport.connect(username=ssh_user, password=ssh_pass)
-        sftp = paramiko.SFTPClient.from_transport(transport)
-        remote_path = f"/home/{ssh_user}/upload/{file.filename}"
-        sftp.put(temp_file_path, remote_path)
-        sftp.close()
-        transport.close()
-        os.remove(temp_file_path)
+        if (ssh_user == "root"):
+            transport = paramiko.Transport((ssh_host, ssh_port))
+            transport.connect(username=ssh_user, password=ssh_pass)
+            sftp = paramiko.SFTPClient.from_transport(transport)
+            remote_path = f"/{ssh_user}/{file.filename}"
+            sftp.put(temp_file_path, remote_path)
+            sftp.close()
+            transport.close()
+            os.remove(temp_file_path)
+        else:
+            transport = paramiko.Transport((ssh_host, ssh_port))
+            transport.connect(username=ssh_user, password=ssh_pass)
+            sftp = paramiko.SFTPClient.from_transport(transport)
+            remote_path = f"/home/{ssh_user}/upload/{file.filename}"
+            sftp.put(temp_file_path, remote_path)
+            sftp.close()
+            transport.close()
+            os.remove(temp_file_path)
 
         '''
         # Running install.sh
