@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 import paramiko
 import shutil
+import zipfile
 import os
 
 # Configuration
@@ -61,7 +62,17 @@ async def upload_file(file: UploadFile = File(...)):
     with open(temp_file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    # For zip files, unzip and upload each file individually
+    if file.filename.lower().endswith(".zip"):
+        extract_dir = os.path.join(temp_folder, "extracted")
+        os.makedirs(extract_dir, exist_ok=True)
+
+        with zipfile.ZipFile(temp_file_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir) # it extracts to a folder 
+
     buffer.close()
+    
+    uploaded_files = []
 
     # SSH credentials
     ssh_host = "10.255.255.20"
@@ -92,11 +103,30 @@ async def upload_file(file: UploadFile = File(...)):
             transport = paramiko.Transport((ssh_host, ssh_port))
             transport.connect(username=ssh_user, password=ssh_pass)
             sftp = paramiko.SFTPClient.from_transport(transport)
-            remote_path = f"/{ssh_user}/{file.filename}"
-            sftp.put(temp_file_path, remote_path)
+            remote_path = f"/{ssh_user}/upload/{file.filename}"
+
+            # Put the zip functionality here
+            if file.filename.lower().endswith(".zip"):
+                for root, dirs, files in os.walk(extract_dir):
+                    for name in files:
+                        local_path = os.path.join(root, name)
+                        print(local_path)
+                        zip_path = f"/{ssh_user}/upload/{name}"
+                        sftp.put(local_path, zip_path)
+                        uploaded_files.append(zip_path)
+            else:
+                sftp.put(temp_file_path, remote_path)
+
+            # Install files into Slot 10 (BUG: Crashed Slot 10)
+            command = "cd upload && chmod +x install.sh && ./install.sh"
+            stdin, stdout, stderr = client.exec_command(command)
+            output = stdout.read().decode()
+            print(output)
+            
             sftp.close()
             transport.close()
             os.remove(temp_file_path)
+
         else:
             transport = paramiko.Transport((ssh_host, ssh_port))
             transport.connect(username=ssh_user, password=ssh_pass)
@@ -106,6 +136,7 @@ async def upload_file(file: UploadFile = File(...)):
             sftp.close()
             transport.close()
             os.remove(temp_file_path)
+            # TODO: remove files that were extracted by zip
 
         '''
         # Running install.sh
@@ -113,8 +144,10 @@ async def upload_file(file: UploadFile = File(...)):
             " chmod +x install.sh && ./install.sh"
         '''
 
-
         client.close()
+
+        if file.filename.lower().endswith(".zip"):
+            return f"Files uploaded successfully: {uploaded_files}"
 
         return f"Upload Sucess! Uploaded to {remote_path}"
 
