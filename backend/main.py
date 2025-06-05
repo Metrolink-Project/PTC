@@ -145,7 +145,7 @@ async def upload_file(file: UploadFile = File(...)):
             print(output)
 
             # Experiment with using dd for burning .iso file
-            command = f"sudo dd if={remote_path} of=/dev/sdX bs=4M status=progress oflag=sync"
+            # command = f"sudo dd if={remote_path} of=/dev/sdX bs=4M status=progress oflag=sync"
             '''
                 if=/path/to/your/filename.iso: Specifies the input file (your ISO image).
                 of=/dev/sdX: Specifies the output device (your USB drive or CFast card).
