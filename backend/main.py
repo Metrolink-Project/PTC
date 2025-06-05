@@ -53,6 +53,10 @@ async def upload_file(file: UploadFile = File(...)):
     if (username != "root"):
         if not file.filename.lower().endswith(".fsa"):
             return JSONResponse(status_code=400, content="ERROR: Only .fsa files are allowed.")
+        
+    # Only allow .iso files to be uploaded to slot 10
+    if not file.filename.lower().endswith(".iso"):
+        return JSONResponse(status_code=400, content="ERROR: Only .iso files are allowed.")
 
     # Temporary folder to put file in order to upload
     temp_folder = "Z:\\Onboard Team\\Marc Reta"
@@ -150,7 +154,7 @@ async def upload_file(file: UploadFile = File(...)):
                 oflag=sync: Ensures synchronous writes, meaning the command won't return until all data is written to the device. 
 
 
-                Use lsblk or fdisk -l: As mentioned previously, the best way to determine the correct device path for your CFast card 
+                Use lsblk or fdisk -l: The best way to determine the correct device path for your CFast card 
                 is to use the lsblk or fdisk -l command in your terminal after inserting the card. This will show you a list of all 
                 your block devices and their corresponding device names
             '''
