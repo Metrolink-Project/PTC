@@ -140,6 +140,21 @@ async def upload_file(file: UploadFile = File(...)):
             output = stdout.read().decode()
             print(output)
 
+            # Experiment with using dd for burning .iso file
+            command = f"sudo dd if={remote_path} of=/dev/sdX bs=4M status=progress oflag=sync"
+            '''
+                if=/path/to/your/filename.iso: Specifies the input file (your ISO image).
+                of=/dev/sdX: Specifies the output device (your USB drive or CFast card).
+                bs=4M: Sets the block size for faster copying (4 megabytes).
+                status=progress: Displays the progress of the operation.
+                oflag=sync: Ensures synchronous writes, meaning the command won't return until all data is written to the device. 
+
+
+                Use lsblk or fdisk -l: As mentioned previously, the best way to determine the correct device path for your CFast card 
+                is to use the lsblk or fdisk -l command in your terminal after inserting the card. This will show you a list of all 
+                your block devices and their corresponding device names
+            '''
+
             sftp.close()
             transport.close()
             os.remove(temp_file_path)
