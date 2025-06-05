@@ -54,9 +54,11 @@ async def upload_file(file: UploadFile = File(...)):
         if not file.filename.lower().endswith(".fsa"):
             return JSONResponse(status_code=400, content="ERROR: Only .fsa files are allowed.")
         
+    '''
     # Only allow .iso files to be uploaded to slot 10
     if not file.filename.lower().endswith(".iso"):
         return JSONResponse(status_code=400, content="ERROR: Only .iso files are allowed.")
+    '''
 
     # Temporary folder to put file in order to upload
     temp_folder = "Z:\\Onboard Team\\Marc Reta"
@@ -145,7 +147,9 @@ async def upload_file(file: UploadFile = File(...)):
             print(output)
 
             # Experiment with using dd for burning .iso file
-            # command = f"sudo dd if={remote_path} of=/dev/sdX bs=4M status=progress oflag=sync"
+            command = "sudo umount /mnt/cfast"
+            command = f"sudo dd if={remote_path} of=/dev/sdX bs=4M status=progress oflag=sync"
+            command = "sudo mount /dev/sdb1 /mnt/cfast"
             '''
                 if=/path/to/your/filename.iso: Specifies the input file (your ISO image).
                 of=/dev/sdX: Specifies the output device (your USB drive or CFast card).
@@ -156,7 +160,15 @@ async def upload_file(file: UploadFile = File(...)):
 
                 Use lsblk or fdisk -l: The best way to determine the correct device path for your CFast card 
                 is to use the lsblk or fdisk -l command in your terminal after inserting the card. This will show you a list of all 
-                your block devices and their corresponding device names
+                your block devices and their corresponding device names. Look for entries that correspond to your CFast card based on
+                size, file system type, or mount point (if it's already mounted). 
+
+                
+                It's recommended to unmount the CFastCard before installing .iso file: (uses the mountpoint path)
+                sudo umount /mnt/cfast
+
+                Re-mount after installing .iso file: (use lsblk to find the original mount point before unmounting)
+                sudo mount /dev/sdb1 /mnt/cfast
             '''
 
             sftp.close()
