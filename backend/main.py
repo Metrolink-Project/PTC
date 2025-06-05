@@ -118,11 +118,28 @@ async def upload_file(file: UploadFile = File(...)):
                 sftp.put(temp_file_path, remote_path)
 
             # Install files into Slot 10 (BUG: Crashed Slot 10)
+            '''
             command = "cd upload && chmod +x install.sh && ./install.sh"
             stdin, stdout, stderr = client.exec_command(command)
             output = stdout.read().decode()
             print(output)
+            '''
+
+            command = "cd upload"
+            stdin, stdout, stderr = client.exec_command(command)
+            output = stdout.read().decode()
+            print(output)
+
+            command = "chmod +x install.sh"
+            stdin, stdout, stderr = client.exec_command(command)
+            output = stdout.read().decode()
+            print(output)
             
+            command = "ls -l"
+            stdin, stdout, stderr = client.exec_command(command)
+            output = stdout.read().decode()
+            print(output)
+
             sftp.close()
             transport.close()
             os.remove(temp_file_path)
