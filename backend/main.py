@@ -7,8 +7,10 @@ import uvicorn                                # Used for running the app
 from pydantic import BaseModel
 
 import paramiko
+import tqdm
 import shutil
 import zipfile
+import gzip
 import os
 
 # Configuration
@@ -64,9 +66,17 @@ async def upload_file(file: UploadFile = File(...)):
     temp_folder = "Z:\\Onboard Team\\Marc Reta"
     os.makedirs(temp_folder, exist_ok=True)
     temp_file_path = os.path.join(temp_folder, file.filename)
+    gz_file_path = os.path.join(temp_folder, f'{file.filename}.gz')
 
     with open(temp_file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+
+    '''
+    # create gzip
+    with open(temp_file_path, 'rb') as temp_file:
+        with gzip.open(gz_file_path, 'wb') as gz_file:
+            shutil.copyfileobj(temp_file, gz_file)
+    '''
 
     # For zip files, unzip and upload each file individually
     if file.filename.lower().endswith(".zip"):
@@ -121,7 +131,11 @@ async def upload_file(file: UploadFile = File(...)):
                         sftp.put(local_path, zip_path)
                         uploaded_files.append(zip_path)
             else:
-                sftp.put(temp_file_path, remote_path)
+                with tqdm.tqdm(desc='Uploading file', unit='iB', unit_scale=True, unit_divisor=1024) as pbar:
+                    def progress(amt, tot):
+                        pbar.total = tot
+                        pbar.update(amt - pbar.n)  # Update with the incremental progress
+                sftp.put(temp_file_path, remote_path, callback=progress)
 
             # Install files into Slot 10 (BUG: Crashed Slot 10)
             '''
@@ -131,6 +145,7 @@ async def upload_file(file: UploadFile = File(...)):
             print(output)
             '''
 
+            '''
             command = "cd upload"
             stdin, stdout, stderr = client.exec_command(command)
             output = stdout.read().decode()
@@ -147,10 +162,12 @@ async def upload_file(file: UploadFile = File(...)):
             print(output)
 
             # Experiment with using dd for burning .iso file
-            command = "sudo umount /mnt/cfast"
-            command = f"sudo dd if={remote_path} of=/dev/sdX bs=4M status=progress oflag=sync"
-            command = "sudo mount /dev/sdb1 /mnt/cfast"
-            '''
+            command = "sudo umount /boot"
+            command = "sudo umount /home"
+            command = f"sudo dd if={remote_path} of=/dev/sda bs=4M status=progress oflag=sync"
+            command = "sudo mount /dev/sda1 /boot"
+            command = "sudo mount /dev/sda3 /home"
+
                 if=/path/to/your/filename.iso: Specifies the input file (your ISO image).
                 of=/dev/sdX: Specifies the output device (your USB drive or CFast card).
                 bs=4M: Sets the block size for faster copying (4 megabytes).
