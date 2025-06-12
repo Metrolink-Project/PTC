@@ -7,6 +7,7 @@ import uvicorn                                # Used for running the app
 from pydantic import BaseModel
 
 import paramiko
+import time
 import shutil
 import zipfile
 import os
@@ -43,6 +44,27 @@ def login(data: LoginData):
     global password 
     password = data.password
     return {username, password}
+
+def run_remote_command(ssh_client, command, timeout=15):
+    try:
+        stdin, stdout, stderr = ssh_client.exec_command(command, timeout=timeout)
+        start_time = time.time()
+
+        while not stdout.channel.exit_status_ready():
+            if time.time() - start_time > timeout:
+                print("Command timed out.")
+                return None, None, None
+            time.sleep(0.1)
+
+        exit_status = stdout.channel.recv_exit_status()
+        out = stdout.read().decode()
+        err = stderr.read().decode()
+
+        return exit_status, out, err
+
+    except Exception as e:
+        print(f"Error running command: {e}")
+        return None, None, None
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -94,7 +116,7 @@ async def upload_file(file: UploadFile = File(...)):
          {'pubkeys': ['rsa-sha2-256', 'rsa-sha2-512']})
 
         # Execute a command
-        stdin, stdout, stderr = client.exec_command("ls -l")
+        stdin, stdout, stderr = client.exec_command("mkdir -p upload")
         output = stdout.read().decode()
         print(output)
 
@@ -117,28 +139,20 @@ async def upload_file(file: UploadFile = File(...)):
             else:
                 sftp.put(temp_file_path, remote_path)
 
-            # Install files into Slot 10 (BUG: Crashed Slot 10)
-            '''
-            command = "cd upload && chmod +x install.sh && ./install.sh"
-            stdin, stdout, stderr = client.exec_command(command)
-            output = stdout.read().decode()
-            print(output)
-            '''
-
-            command = "cd upload"
-            stdin, stdout, stderr = client.exec_command(command)
-            output = stdout.read().decode()
-            print(output)
-
-            command = "chmod +x install.sh"
-            stdin, stdout, stderr = client.exec_command(command)
-            output = stdout.read().decode()
-            print(output)
-            
+            # Install new OS into Slot 10
             command = "ls -l"
             stdin, stdout, stderr = client.exec_command(command)
             output = stdout.read().decode()
             print(output)
+
+            command = "cd upload && chmod u+x install.sh"
+            stdin, stdout, stderr = client.exec_command(command)
+            output = stdout.read().decode()
+            print(output)
+            
+            print("running ./install.sh")
+            command = "cd upload && ./install.sh" 
+            run_remote_command(client, command)
 
             sftp.close()
             transport.close()
@@ -153,20 +167,23 @@ async def upload_file(file: UploadFile = File(...)):
             sftp.close()
             transport.close()
             os.remove(temp_file_path)
-            # TODO: remove files that were extracted by zip
-
-        '''
-        # Running install.sh
-        command = "cd 339bc94e1be405554a9107988b5535c0 &&" +
-            " chmod +x install.sh && ./install.sh"
-        '''
 
         client.close()
 
         if file.filename.lower().endswith(".zip"):
-            return f"Files uploaded successfully: {uploaded_files}"
+            # delete extracted folder
+            if os.path.exists(extract_dir):
+                try:
+                    shutil.rmtree(extract_dir)
+                    print(f"Directory '{extract_dir}' and its contents deleted successfully.")
+                except OSError as e:
+                    print(f"Error deleting directory '{extract_dir}': {e}")
+            else:
+                print(f"Directory '{extract_dir}' does not exist.")
 
-        return f"Upload Sucess! Uploaded to {remote_path}"
+            return f"OS installed successfully: {uploaded_files}"
+
+        return f"Install Sucess! Uploaded to {remote_path}"
 
     except Exception as e:
         print(f"An error occurred: {e}")
