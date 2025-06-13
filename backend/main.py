@@ -1,18 +1,16 @@
 # Necessary Imports
-from fastapi import FastAPI, File, UploadFile, HTTPException, Request  # The main FastAPI import
+from fastapi import FastAPI, File, UploadFile, HTTPException  # The main FastAPI import
 from fastapi.responses import HTMLResponse  # Used for returning HTML responses
 from fastapi.staticfiles import StaticFiles   # Used for serving static files
 from fastapi.responses import JSONResponse
-from fastapi.templating import Jinja2Templates
 import uvicorn                                # Used for running the app
 from pydantic import BaseModel
-from pathlib import Path
 
 import paramiko
 import time
 import shutil
-import zipfile
 import webbrowser
+import zipfile
 import os
 
 # Configuration
@@ -22,16 +20,17 @@ username = ""
 password = ""
 
 # Mount the static directory
-app.mount('/static', StaticFiles(directory=str(Path(__file__).with_name('static')), html=True), name='static')
-frontend = Jinja2Templates(directory=str(Path(__file__).with_name("frontend")))
+app.mount("/static", StaticFiles(directory="backend/static"), name="static")
 
-@app.get("/")
-def get_login_html(request: Request):
-    return frontend.TemplateResponse("login.html", {"request": request})
+@app.get("/", response_class=HTMLResponse)
+def get_index_html() -> HTMLResponse:
+    with open("frontend/login.html") as html:
+        return HTMLResponse(content=html.read())
 
-@app.get("/index")
-def get_index_html(request: Request):
-    return frontend.TemplateResponse("index.html", {"request": request})
+@app.get("/index", response_class=HTMLResponse)
+def get_index_html() -> HTMLResponse:
+    with open("frontend/index.html") as html:
+        return HTMLResponse(content=html.read())
     
 class LoginData(BaseModel):
     username: str
@@ -41,18 +40,11 @@ class LoginData(BaseModel):
 def login(data: LoginData):
     print("Username:" + data.username)
     print("Password:" + data.password)
-
-    if (data.username == "tech" and data.password == ""):
-        print("Login successful")
-        global username 
-        username = "root"
-        global password 
-        password = ""
-        return {data.username, data.password}
-    else:
-        print("Wrong password")
-
-    return 'Wrong password'
+    global username 
+    username = data.username
+    global password 
+    password = data.password
+    return {username, password}
 
 def run_remote_command(ssh_client, command, timeout=15):
     try:
@@ -80,9 +72,10 @@ async def upload_file(file: UploadFile = File(...)):
 
     message = f"Python recieved the file: {file.filename} {file.content_type}"
 
-    # Stop non-fsa (.zip) from uploading and installing
-    if not file.filename.lower().endswith(".zip"):
-        return JSONResponse(status_code=400, content="ERROR: Only .fsa files are allowed.")
+    # Perfect place to stop non-fsa files from going through for non-root users
+    if (username != "root"):
+        if not file.filename.lower().endswith(".fsa"):
+            return JSONResponse(status_code=400, content="ERROR: Only .fsa files are allowed.")
 
     # Temporary folder to put file in order to upload
     temp_folder = "Z:\\Onboard Team\\Marc Reta"
@@ -171,20 +164,6 @@ async def upload_file(file: UploadFile = File(...)):
             transport.connect(username=ssh_user, password=ssh_pass)
             sftp = paramiko.SFTPClient.from_transport(transport)
             remote_path = f"/home/{ssh_user}/upload/{file.filename}"
-
-            # Put the zip functionality here
-            if file.filename.lower().endswith(".zip"):
-                for root, dirs, files in os.walk(extract_dir):
-                    for name in files:
-                        local_path = os.path.join(root, name)
-                        print(local_path)
-                        zip_path = f"/home/{ssh_user}/upload/{name}"
-                        sftp.put(local_path, zip_path)
-                        uploaded_files.append(zip_path)
-            else:
-                sftp.put(temp_file_path, remote_path)
-
-
             sftp.put(temp_file_path, remote_path)
             sftp.close()
             transport.close()
