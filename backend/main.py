@@ -1,15 +1,18 @@
 # Necessary Imports
-from fastapi import FastAPI, File, UploadFile, HTTPException  # The main FastAPI import
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request  # The main FastAPI import
 from fastapi.responses import HTMLResponse  # Used for returning HTML responses
 from fastapi.staticfiles import StaticFiles   # Used for serving static files
 from fastapi.responses import JSONResponse
+from fastapi.templating import Jinja2Templates
 import uvicorn                                # Used for running the app
 from pydantic import BaseModel
+from pathlib import Path
 
 import paramiko
 import time
 import shutil
 import zipfile
+import webbrowser
 import os
 
 # Configuration
@@ -19,17 +22,16 @@ username = ""
 password = ""
 
 # Mount the static directory
-app.mount("/static", StaticFiles(directory="backend/static"), name="static")
+app.mount('/static', StaticFiles(directory=str(Path(__file__).with_name('static')), html=True), name='static')
+frontend = Jinja2Templates(directory=str(Path(__file__).with_name("frontend")))
 
-@app.get("/", response_class=HTMLResponse)
-def get_index_html() -> HTMLResponse:
-    with open("frontend/login.html") as html:
-        return HTMLResponse(content=html.read())
+@app.get("/")
+def get_login_html(request: Request):
+    return frontend.TemplateResponse("login.html", {"request": request})
 
-@app.get("/index", response_class=HTMLResponse)
-def get_index_html() -> HTMLResponse:
-    with open("frontend/index.html") as html:
-        return HTMLResponse(content=html.read())
+@app.get("/index")
+def get_index_html(request: Request):
+    return frontend.TemplateResponse("index.html", {"request": request})
     
 class LoginData(BaseModel):
     username: str
@@ -71,10 +73,9 @@ async def upload_file(file: UploadFile = File(...)):
 
     message = f"Python recieved the file: {file.filename} {file.content_type}"
 
-    # Perfect place to stop non-fsa files from going through for non-root users
-    if (username != "root"):
-        if not file.filename.lower().endswith(".fsa"):
-            return JSONResponse(status_code=400, content="ERROR: Only .fsa files are allowed.")
+    # Stop non-fsa (.zip) from uploading and installing
+    if not file.filename.lower().endswith(".zip"):
+        return JSONResponse(status_code=400, content="ERROR: Only .fsa files are allowed.")
 
     # Temporary folder to put file in order to upload
     temp_folder = "Z:\\Onboard Team\\Marc Reta"
@@ -163,6 +164,20 @@ async def upload_file(file: UploadFile = File(...)):
             transport.connect(username=ssh_user, password=ssh_pass)
             sftp = paramiko.SFTPClient.from_transport(transport)
             remote_path = f"/home/{ssh_user}/upload/{file.filename}"
+
+            # Put the zip functionality here
+            if file.filename.lower().endswith(".zip"):
+                for root, dirs, files in os.walk(extract_dir):
+                    for name in files:
+                        local_path = os.path.join(root, name)
+                        print(local_path)
+                        zip_path = f"/home/{ssh_user}/upload/{name}"
+                        sftp.put(local_path, zip_path)
+                        uploaded_files.append(zip_path)
+            else:
+                sftp.put(temp_file_path, remote_path)
+
+
             sftp.put(temp_file_path, remote_path)
             sftp.close()
             transport.close()
@@ -189,4 +204,5 @@ async def upload_file(file: UploadFile = File(...)):
         print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
+    webbrowser.open("http://127.0.0.1:6543")
     uvicorn.run(app, host="127.0.0.1", port=6543)
