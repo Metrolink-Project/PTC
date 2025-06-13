@@ -41,11 +41,18 @@ class LoginData(BaseModel):
 def login(data: LoginData):
     print("Username:" + data.username)
     print("Password:" + data.password)
-    global username 
-    username = data.username
-    global password 
-    password = data.password
-    return {username, password}
+
+    if (data.username == "tech" and data.password == ""):
+        print("Login successful")
+        global username 
+        username = "root"
+        global password 
+        password = ""
+        return {data.username, data.password}
+    else:
+        print("Wrong password")
+
+    return 'Wrong password'
 
 def run_remote_command(ssh_client, command, timeout=15):
     try:
@@ -205,4 +212,5 @@ async def upload_file(file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     webbrowser.open("http://127.0.0.1:6543")
+    print("\n \n \n Welcome to Metrolink: PTC OS Installer! By Marc Reta \n \n \n")
     uvicorn.run(app, host="127.0.0.1", port=6543)
