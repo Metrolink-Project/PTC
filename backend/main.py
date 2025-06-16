@@ -164,7 +164,19 @@ async def upload_file(file: UploadFile = File(...)):
             transport.connect(username=ssh_user, password=ssh_pass)
             sftp = paramiko.SFTPClient.from_transport(transport)
             remote_path = f"/home/{ssh_user}/upload/{file.filename}"
-            sftp.put(temp_file_path, remote_path)
+
+            # Put the zip functionality here
+            if file.filename.lower().endswith(".zip"):
+                for root, dirs, files in os.walk(extract_dir):
+                    for name in files:
+                        local_path = os.path.join(root, name)
+                        print(local_path)
+                        zip_path = f"/home/{ssh_user}/upload/{name}"
+                        sftp.put(local_path, zip_path)
+                        uploaded_files.append(zip_path)
+            else:
+                sftp.put(temp_file_path, remote_path)
+
             sftp.close()
             transport.close()
             os.remove(temp_file_path)
