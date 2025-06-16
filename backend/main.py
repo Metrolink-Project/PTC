@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 import uvicorn                                # Used for running the app
 from pydantic import BaseModel
 from pathlib import Path
+from glob import glob
 
 import paramiko
 import time
@@ -76,33 +77,34 @@ def run_remote_command(ssh_client, command, timeout=15):
         return None, None, None
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file():
 
-    message = f"Python recieved the file: {file.filename} {file.content_type}"
+    your_folder_path = "C:\\Slot10_OS"
 
-    # Stop non-fsa (.zip) from uploading and installing
-    if not file.filename.lower().endswith(".zip"):
-        return JSONResponse(status_code=400, content="ERROR: Only .fsa files are allowed.")
+    if not os.path.exists(your_folder_path):
+        os.makedirs(your_folder_path)
 
-    # Temporary folder to put file in order to upload
-    temp_folder = "Z:\\Onboard Team\\Marc Reta"
-    os.makedirs(temp_folder, exist_ok=True)
-    temp_file_path = os.path.join(temp_folder, file.filename)
+    extract_dir = "C:\\Slot10_OS\\extracted"
+    os.makedirs(extract_dir, exist_ok=True)
 
-    with open(temp_file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    zip_files = glob(os.path.join(your_folder_path, '*.zip'))
 
-    # For zip files, unzip and upload each file individually
-    if file.filename.lower().endswith(".zip"):
-        extract_dir = os.path.join(temp_folder, "extracted")
-        os.makedirs(extract_dir, exist_ok=True)
+    if zip_files:
+        temp_file_path = zip_files[0]
+        print(f"Found zip file at: {temp_file_path}")
 
         with zipfile.ZipFile(temp_file_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_dir) # it extracts to a folder 
-
-    buffer.close()
+            zip_ref.extractall(extract_dir)
+            print(f"Extracted contents of {temp_file_path} to {extract_dir}")
+    else:
+        os.rmdir(extract_dir)
+        return f"No OS file found in {your_folder_path}"
     
     uploaded_files = []
+
+    # Delete below when testing Slot 10
+    os.remove(temp_file_path)
+    return 'Files were extracted successfully.'
 
     # SSH credentials
     ssh_host = "10.255.255.20"
@@ -133,19 +135,15 @@ async def upload_file(file: UploadFile = File(...)):
             transport = paramiko.Transport((ssh_host, ssh_port))
             transport.connect(username=ssh_user, password=ssh_pass)
             sftp = paramiko.SFTPClient.from_transport(transport)
-            remote_path = f"/{ssh_user}/upload/{file.filename}"
 
             # Put the zip functionality here
-            if file.filename.lower().endswith(".zip"):
-                for root, dirs, files in os.walk(extract_dir):
-                    for name in files:
-                        local_path = os.path.join(root, name)
-                        print(local_path)
-                        zip_path = f"/{ssh_user}/upload/{name}"
-                        sftp.put(local_path, zip_path)
-                        uploaded_files.append(zip_path)
-            else:
-                sftp.put(temp_file_path, remote_path)
+            for root, dirs, files in os.walk(extract_dir):
+                for name in files:
+                    local_path = os.path.join(root, name)
+                    print(local_path)
+                    zip_path = f"/{ssh_user}/upload/{name}"
+                    sftp.put(local_path, zip_path)
+                    uploaded_files.append(zip_path)
 
             # Install new OS into Slot 10
             command = "ls -l"
@@ -166,46 +164,18 @@ async def upload_file(file: UploadFile = File(...)):
             transport.close()
             os.remove(temp_file_path)
 
-        else:
-            transport = paramiko.Transport((ssh_host, ssh_port))
-            transport.connect(username=ssh_user, password=ssh_pass)
-            sftp = paramiko.SFTPClient.from_transport(transport)
-            remote_path = f"/home/{ssh_user}/upload/{file.filename}"
-
-            # Put the zip functionality here
-            if file.filename.lower().endswith(".zip"):
-                for root, dirs, files in os.walk(extract_dir):
-                    for name in files:
-                        local_path = os.path.join(root, name)
-                        print(local_path)
-                        zip_path = f"/home/{ssh_user}/upload/{name}"
-                        sftp.put(local_path, zip_path)
-                        uploaded_files.append(zip_path)
-            else:
-                sftp.put(temp_file_path, remote_path)
-
-
-            sftp.put(temp_file_path, remote_path)
-            sftp.close()
-            transport.close()
-            os.remove(temp_file_path)
-
         client.close()
 
-        if file.filename.lower().endswith(".zip"):
-            # delete extracted folder
-            if os.path.exists(extract_dir):
-                try:
-                    shutil.rmtree(extract_dir)
-                    print(f"Directory '{extract_dir}' and its contents deleted successfully.")
-                except OSError as e:
-                    print(f"Error deleting directory '{extract_dir}': {e}")
-            else:
-                print(f"Directory '{extract_dir}' does not exist.")
+        if os.path.exists(extract_dir):
+            try:
+                shutil.rmtree(extract_dir)
+                print(f"Directory '{extract_dir}' and its contents deleted successfully.")
+            except OSError as e:
+                print(f"Error deleting directory '{extract_dir}': {e}")
+        else:
+            print(f"Directory '{extract_dir}' does not exist.")
 
-            return f"OS installed successfully: {uploaded_files}"
-
-        return f"Install Sucess! Uploaded to {remote_path}"
+        return f"OS installed successfully: {uploaded_files}"
 
     except Exception as e:
         print(f"An error occurred: {e}")
